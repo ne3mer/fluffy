@@ -19,7 +19,6 @@ function FurLayer({ index, total }) {
       <sphereGeometry args={[1, 64, 64]} />
       <furMaterial
         ref={matRef}
-        transparent
         uLayer={index}
         uTotalLayers={total}
         uColor={new THREE.Color('#ff69b4')}

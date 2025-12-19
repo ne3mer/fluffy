@@ -31,7 +31,6 @@ const FurMaterial = shaderMaterial(
   `
   varying vec2 vUv;
   uniform float uLayer;
-  uniform float uTime;
   uniform vec3 uColor;
 
   // Simple pseudo-random function
@@ -39,28 +38,20 @@ const FurMaterial = shaderMaterial(
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
   }
 
-  // Cosine based palette, 4 vec3 params
-  vec3 palette( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )
-  {
-      return a + b*cos( 6.28318*(c*t+d) );
-  }
-
   void main() {
     float n = hash(vUv * 200.0); // Create the "hair" density
+    
+    // ALPHA TEST: If this pixel isn't hair, discard it. 
+    // This creates sharp edges instead of blurry transparency.
     if (uLayer > 0.0 && n < (uLayer * 0.05)) discard;
     
     float shading = 1.0 - (uLayer * 0.03); // Darken inner layers for depth
     
-    // Rainbow Logic
-    vec3 color = palette(
-        uTime * 0.1 + vUv.x, 
-        vec3(0.5, 0.5, 0.5),
-        vec3(0.5, 0.5, 0.5),
-        vec3(1.0, 1.0, 1.0),
-        vec3(0.00, 0.33, 0.67)
-    );
-    
-    gl_FragColor = vec4(color * shading, 1.0);
+    // Gradient Color: Darker at the bottom, Lighter at the top
+    float brightness = 0.5 + 0.5 * vUv.y;
+    vec3 finalColor = uColor * shading * brightness;
+
+    gl_FragColor = vec4(finalColor, 1.0);
   }
   `
 )
