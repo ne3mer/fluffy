@@ -149,7 +149,7 @@ const SceneContent = () => {
   return (
     <>
       <group ref={creatureRef}>
-         <FluffyCreature />
+         <FluffyCreature activeSection={activeStep} />
       </group>
       
       <ambientLight intensity={0.2} />
