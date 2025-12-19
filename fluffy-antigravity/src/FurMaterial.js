@@ -5,54 +5,70 @@ import { extend } from '@react-three/fiber'
 const FurMaterial = shaderMaterial(
   {
     uTime: 0,
-    uColor: new THREE.Color('#ff69b4'),
     uLayer: 0,
     uTotalLayers: 20,
+    uColorTop: new THREE.Color('#a855f7'), // Purple
+    uColorBottom: new THREE.Color('#db2777'), // Pink
   },
   // Vertex Shader
   `
-  varying vec2 vUv;
-  uniform float uTime;
-  uniform float uLayer;
-  uniform float uTotalLayers;
-  
-  void main() {
-    vUv = uv;
-    float delta = uLayer / uTotalLayers;
-    // Displace the vertex along its normal based on which "layer" it is
-    vec3 displacement = normal * delta * 0.5; 
-    // Add a slight "wind" wiggle
-    displacement += sin(uTime + position.y * 10.0) * 0.02 * delta;
-    
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position + displacement, 1.0);
-  }
+    varying vec2 vUv;
+    varying float vLayerProp;
+    uniform float uTime;
+    uniform float uLayer;
+    uniform float uTotalLayers;
+
+    void main() {
+      vUv = uv;
+      vLayerProp = uLayer / uTotalLayers;
+      
+      // Expand vertices based on layer index to create shells
+      // Add slight waviness for "fluff"
+      float expansion = vLayerProp * 0.2; 
+      vec3 newPos = position + normal * expansion;
+      
+      // Wind/Movement effect
+      float wind = sin(uTime * 2.0 + position.x * 5.0 + position.y * 5.0) * 0.02 * vLayerProp;
+      newPos.x += wind;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+    }
   `,
   // Fragment Shader
   `
-  varying vec2 vUv;
-  uniform float uLayer;
-  uniform vec3 uColor;
+    varying vec2 vUv;
+    varying float vLayerProp;
+    uniform vec3 uColorTop;
+    uniform vec3 uColorBottom;
 
-  // Simple pseudo-random function
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-  }
+    // Simple noise function
+    float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+    }
 
-  void main() {
-    float n = hash(vUv * 200.0); // Create the "hair" density
-    
-    // ALPHA TEST: If this pixel isn't hair, discard it. 
-    // This creates sharp edges instead of blurry transparency.
-    if (uLayer > 0.0 && n < (uLayer * 0.05)) discard;
-    
-    float shading = 1.0 - (uLayer * 0.03); // Darken inner layers for depth
-    
-    // Gradient Color: Darker at the bottom, Lighter at the top
-    float brightness = 0.5 + 0.5 * vUv.y;
-    vec3 finalColor = uColor * shading * brightness;
+    void main() {
+      // Create noise pattern for fur density
+      // We scale UVs to make widespread strands
+      vec2 st = vUv * 100.0; // Higher number = finer fur
+      float noiseVal = random(floor(st)); 
+      
+      // Threshold based on layer depth
+      // Inner layers (low vLayerProp) are dense, outer layers are sparse
+      // We want distinct strands at the tips
+      float threshold = 0.5 + vLayerProp * 0.45; // 0.5 to 0.95
+      
+      // Alpha Test / Cutout
+      if (noiseVal < threshold) discard;
+      
+      // Color: Gradient from Texture UV
+      vec3 finalColor = mix(uColorBottom, uColorTop, vUv.y);
+      
+      // Shadowing for depth: Inner layers darker
+      float shadow = 0.5 + 0.5 * vLayerProp;
+      finalColor *= shadow;
 
-    gl_FragColor = vec4(finalColor, 1.0);
-  }
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
   `
 )
 

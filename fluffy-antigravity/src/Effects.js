@@ -1,5 +1,5 @@
 import React from 'react'
-import { EffectComposer, Bloom, Noise } from '@react-three/postprocessing'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 
 export function Effects() {
   return (
@@ -10,7 +10,6 @@ export function Effects() {
         levels={9} 
         mipmapBlur 
       />
-      <Noise opacity={0.02} />
     </EffectComposer>
   )
 }
